@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rolebin · Job tracker</title>
-  <meta name="description" content="Keep a list of the jobs you've found and applied to. Runs in your browser, stores everything locally, no account.">
+  <meta name="description" content="Keep a list of the jobs you've found and applied to. Runs in your browser with no account; optionally syncs through your own Google Drive, Dropbox, OneDrive or GitHub.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; connect-src 'self' https:; frame-src https://accounts.google.com; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
@@ -16,9 +17,14 @@
     <header class="header">
       <div>
         <h1 class="logo">Rolebin</h1>
-        <p class="tagline">Personal job tracker &middot; stored only in this browser</p>
+        <p class="tagline">Personal job tracker &middot; <span id="storageNote">stored only in this browser</span></p>
       </div>
-      <button id="addJobBtn" class="btn btn-primary" type="button">+ Add Job</button>
+      <div class="header-actions">
+        <button id="syncBtn" class="btn btn-secondary sync-btn" type="button" aria-haspopup="dialog" data-status="off">
+          <span class="sync-dot" aria-hidden="true"></span><span id="syncLabel">Sync</span>
+        </button>
+        <button id="addJobBtn" class="btn btn-primary" type="button">+ Add Job</button>
+      </div>
     </header>
 
     <div id="storageError" class="warning-alert" role="alert" hidden>
@@ -65,7 +71,7 @@
     </main>
 
     <footer class="footer">
-      <p>Nothing leaves this device. Clearing site data erases your list, so export a backup now and then.</p>
+      <p id="footerNote">Nothing leaves this device. Clearing site data erases your list, so turn on sync or export a backup now and then.</p>
       <div class="footer-actions">
         <button type="button" id="exportBtn" class="text-action">Export backup (JSON)</button>
         <span class="sep" aria-hidden="true">&middot;</span>
@@ -155,6 +161,20 @@
     </div>
   </dialog>
 
+  <!-- Cloud Sync Dialog (content rendered by sync.js) -->
+  <dialog id="syncModal" class="modal" aria-labelledby="syncTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 id="syncTitle">Sync across devices</h2>
+        <button type="button" id="closeSyncModalBtn" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div id="syncBody" class="sync-body" aria-live="polite"></div>
+    </div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="store.js"></script>
   <script src="app.js"></script>
+  <script src="sync.js"></script>
 </body>
 </html>

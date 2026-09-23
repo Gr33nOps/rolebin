@@ -1,19 +1,16 @@
 /**
  * Rolebin - Pure Vanilla JavaScript Application
- * Zero dependencies, works completely offline with localStorage
+ * Zero dependencies. Data lives in store.js (localStorage); sync.js optionally
+ * mirrors it to the user's own cloud storage.
  */
 
 (function () {
   'use strict';
 
-  // Storage keys (legacy key is read once and migrated)
-  const STORAGE_KEY = 'rolebin_jobs_v1';
-  const LEGACY_STORAGE_KEY = 'job_tracker_data_v1';
-
-  const STATUSES = ['Saved', 'Applied', 'Interview', 'Rejected', 'Offer'];
+  const Store = window.RolebinStore;
+  const STATUSES = Store.STATUSES;
 
   // Application State
-  let jobs = [];
   let currentFilter = 'All';
   let searchQuery = '';
   let pendingDeleteJobId = null;
@@ -63,71 +60,6 @@
   const exportBtn = document.getElementById('exportBtn');
   const importBtn = document.getElementById('importBtn');
   const importFileInput = document.getElementById('importFileInput');
-
-  // ==========================================================================
-  // Storage Functions
-  // ==========================================================================
-
-  function generateId() {
-    return 'job_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-  }
-
-  function asString(value) {
-    return typeof value === 'string' ? value : '';
-  }
-
-  // Coerce anything read from storage or an imported file into a well-formed job.
-  // Returns null for entries that can't be a job (no title).
-  function sanitizeJob(raw) {
-    if (!raw || typeof raw !== 'object') return null;
-
-    const title = asString(raw.title).trim();
-    if (!title) return null;
-
-    return {
-      id: asString(raw.id) || generateId(),
-      title: title,
-      company: asString(raw.company).trim(),
-      link: asString(raw.link).trim(),
-      platform: asString(raw.platform).trim(),
-      status: STATUSES.includes(raw.status) ? raw.status : 'Saved',
-      notes: asString(raw.notes).trim(),
-      dateAdded: asString(raw.dateAdded)
-    };
-  }
-
-  function sanitizeJobList(list) {
-    if (!Array.isArray(list)) return [];
-    const seenIds = new Set();
-    return list.map(sanitizeJob).filter(job => {
-      if (!job) return false;
-      if (seenIds.has(job.id)) job.id = generateId();
-      seenIds.add(job.id);
-      return true;
-    });
-  }
-
-  function loadJobs() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
-      jobs = raw === null ? [] : sanitizeJobList(JSON.parse(raw));
-    } catch (e) {
-      console.error('Failed to load jobs from localStorage:', e);
-      jobs = [];
-    }
-  }
-
-  function saveJobs() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
-      storageError.hidden = true;
-      return true;
-    } catch (e) {
-      console.error('Failed to save jobs to localStorage:', e);
-      storageError.hidden = false;
-      return false;
-    }
-  }
 
   // ==========================================================================
   // URL & Platform Helpers
@@ -202,15 +134,10 @@
     const normalizedTarget = normalizeUrl(url);
     if (!normalizedTarget) return null;
 
-    return jobs.find(job => {
+    return Store.getJobs().find(job => {
       if (currentJobId && job.id === currentJobId) return false;
       return normalizeUrl(job.link) === normalizedTarget;
     });
-  }
-
-  function formatCurrentDate() {
-    const options = { month: 'short', day: 'numeric', year: 'numeric' };
-    return new Date().toLocaleDateString('en-US', options);
   }
 
   function escapeHtml(str) {
@@ -227,7 +154,7 @@
   // Rendering
   // ==========================================================================
 
-  function renderSummary() {
+  function renderSummary(jobs) {
     const counts = { All: jobs.length };
     STATUSES.forEach(status => { counts[status] = 0; });
     jobs.forEach(job => { counts[job.status]++; });
@@ -238,7 +165,9 @@
   }
 
   function renderJobs() {
-    renderSummary();
+    const jobs = Store.getJobs();
+    renderSummary(jobs);
+    storageError.hidden = !Store.saveFailed();
 
     const query = searchQuery.toLowerCase();
     const filtered = jobs.filter(job => {
@@ -262,8 +191,18 @@
       return;
     }
 
+    // Re-rendering replaces every card; put keyboard focus back where it was
+    const focused = jobsList.contains(document.activeElement) ? document.activeElement : null;
+    const focusAction = focused && focused.dataset.action;
+    const focusId = focused && focused.dataset.id;
+
     emptyState.hidden = true;
     jobsList.innerHTML = filtered.map(createJobCardHtml).join('');
+
+    if (focusAction && focusId) {
+      const target = jobsList.querySelector(`[data-action="${focusAction}"][data-id="${CSS.escape(focusId)}"]`);
+      if (target) target.focus();
+    }
   }
 
   function createJobCardHtml(job) {
@@ -316,25 +255,14 @@
 
   function handleListChange(e) {
     const select = e.target.closest('select[data-action="status"]');
-    if (select) updateJobStatus(select.dataset.id, select.value);
+    if (select && STATUSES.includes(select.value)) {
+      Store.updateJob(select.dataset.id, { status: select.value });
+    }
   }
 
   // ==========================================================================
-  // Job Actions
+  // Dialogs
   // ==========================================================================
-
-  function updateJobStatus(jobId, newStatus) {
-    const job = jobs.find(j => j.id === jobId);
-    if (!job || !STATUSES.includes(newStatus)) return;
-
-    job.status = newStatus;
-    saveJobs();
-    renderJobs();
-
-    // Re-render replaced the select; keep keyboard focus where the user was
-    const select = jobsList.querySelector(`select[data-id="${CSS.escape(jobId)}"]`);
-    if (select) select.focus();
-  }
 
   function resetFormMessages() {
     duplicateWarning.hidden = true;
@@ -357,7 +285,7 @@
   }
 
   function openEditModal(jobId) {
-    const job = jobs.find(j => j.id === jobId);
+    const job = Store.findJob(jobId);
     if (!job) return;
 
     jobForm.reset();
@@ -382,7 +310,7 @@
   }
 
   function openDeleteModal(jobId) {
-    const job = jobs.find(j => j.id === jobId);
+    const job = Store.findJob(jobId);
     if (!job) return;
 
     pendingDeleteJobId = jobId;
@@ -398,10 +326,8 @@
   function executeDeleteJob() {
     if (!pendingDeleteJobId) return;
 
-    jobs = jobs.filter(j => j.id !== pendingDeleteJobId);
-    saveJobs();
+    Store.deleteJob(pendingDeleteJobId);
     closeDeleteModal();
-    renderJobs();
     addJobBtn.focus();
   }
 
@@ -432,11 +358,7 @@
     resetFormMessages();
 
     const title = jobTitleInput.value.trim();
-    const company = jobCompanyInput.value.trim();
     const link = jobLinkInput.value.trim();
-    const platform = jobPlatformInput.value.trim();
-    const status = STATUSES.includes(jobStatusInput.value) ? jobStatusInput.value : 'Saved';
-    const notes = jobNotesInput.value.trim();
     const editingId = jobIdInput.value;
 
     let firstInvalid = null;
@@ -464,23 +386,19 @@
 
     const fields = {
       title: title,
-      company: company,
+      company: jobCompanyInput.value.trim(),
       link: link,
-      platform: platform || detectPlatform(link) || 'Direct',
-      status: status,
-      notes: notes
+      platform: jobPlatformInput.value.trim() || detectPlatform(link) || 'Direct',
+      status: jobStatusInput.value,
+      notes: jobNotesInput.value.trim()
     };
 
-    if (editingId) {
-      const job = jobs.find(j => j.id === editingId);
-      if (job) Object.assign(job, fields);
-    } else {
-      jobs.unshift(Object.assign({ id: generateId(), dateAdded: formatCurrentDate() }, fields));
+    // If the job was deleted on another device while being edited, keep the edit as a new job
+    if (!editingId || !Store.updateJob(editingId, fields)) {
+      Store.addJob(fields);
     }
 
-    saveJobs();
     closeJobModal();
-    renderJobs();
   }
 
   // ==========================================================================
@@ -518,7 +436,7 @@
   // ==========================================================================
 
   function exportBackup() {
-    const blob = new Blob([JSON.stringify(jobs, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(Store.getJobs(), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
     const dateStr = new Date().toISOString().split('T')[0];
@@ -543,13 +461,13 @@
           return;
         }
 
-        const imported = sanitizeJobList(parsed);
-        const skipped = parsed.length - imported.length;
+        const importCount = Store.sanitizeJobList(parsed).length;
+        const currentCount = Store.getJobs().length;
+        const skipped = parsed.length - importCount;
         const skippedNote = skipped ? `\n${skipped} entr${skipped === 1 ? 'y' : 'ies'} without a title will be skipped.` : '';
 
-        if (confirm(`Import ${imported.length} job${imported.length === 1 ? '' : 's'}? This replaces your current list of ${jobs.length}.${skippedNote}`)) {
-          jobs = imported;
-          saveJobs();
+        if (confirm(`Import ${importCount} job${importCount === 1 ? '' : 's'}? This replaces your current list of ${currentCount}.${skippedNote}`)) {
+          Store.replaceAll(parsed);
           setFilter('All');
         }
       } catch (err) {
@@ -581,8 +499,10 @@
   }
 
   function init() {
-    loadJobs();
     renderJobs();
+
+    // Every change, whether made here, synced from the cloud, or made in another tab
+    Store.subscribe(renderJobs);
 
     addJobBtn.addEventListener('click', openAddModal);
     emptyAddBtn.addEventListener('click', openAddModal);
@@ -624,7 +544,7 @@
     // Ctrl+K / Cmd+K focuses search (ignored while a dialog is open)
     window.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        if (jobModal.open || deleteModal.open) return;
+        if (document.querySelector('dialog[open]')) return;
         e.preventDefault();
         searchInput.focus();
         searchInput.select();
@@ -632,9 +552,5 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  init();
 })();

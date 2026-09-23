@@ -452,6 +452,177 @@ button, input, select, textarea {
   background-color: var(--danger-hover);
 }
 
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Cloud Sync
+   ========================================================================== */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.sync-btn {
+  gap: 0.4rem;
+}
+
+/* Static status dot; the label carries the meaning, the dot helps scanning */
+.sync-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--border-strong);
+  flex-shrink: 0;
+}
+
+.sync-btn[data-status="off"] .sync-dot { display: none; }
+.sync-btn[data-status="idle"] .sync-dot { background-color: var(--offer-text); }
+.sync-btn[data-status="pending"] .sync-dot,
+.sync-btn[data-status="syncing"] .sync-dot { background-color: var(--applied-text); }
+.sync-btn[data-status="auth"] .sync-dot,
+.sync-btn[data-status="error"] .sync-dot { background-color: var(--warning-text); }
+
+.sync-btn[data-status="auth"],
+.sync-btn[data-status="error"] {
+  border-color: var(--warning-border);
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.sync-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sync-intro {
+  font-size: 0.875rem;
+  color: var(--text-body);
+}
+
+.sync-intro code {
+  font-size: 0.8125rem;
+  background-color: var(--surface-muted);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+}
+
+.sync-intro .link-btn {
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+
+/* One bordered list with dividers rather than a stack of separate cards */
+.provider-list {
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.provider-list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.provider-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  background: var(--surface);
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.provider-option:hover:not(:disabled) {
+  background-color: var(--hover);
+}
+
+.provider-option:focus-visible {
+  outline-offset: -2px;
+}
+
+.provider-option:disabled {
+  cursor: not-allowed;
+}
+
+.provider-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.provider-option:disabled .provider-name {
+  color: var(--text-muted);
+}
+
+.provider-detail {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.sync-form .field {
+  margin-bottom: 0;
+}
+
+.sync-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sync-form input[type="password"] {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.9375rem;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background-color: var(--surface);
+}
+
+.sync-form input[type="password"]:focus {
+  border-color: var(--text);
+}
+
+.sync-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.sync-details div {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.75rem;
+}
+
+.sync-details dt {
+  color: var(--text-muted);
+}
+
+.sync-details dd {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.sync-account {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.sync-footer {
+  justify-content: space-between;
+}
+
 /* ==========================================================================
    Empty State
    ========================================================================== */
@@ -719,6 +890,15 @@ main {
 
   .modal-dialog {
     padding: 1rem 1.1rem;
+  }
+
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .sync-details div {
+    grid-template-columns: 1fr;
+    gap: 0;
   }
 
   /* Larger tap targets for the in-card actions */
