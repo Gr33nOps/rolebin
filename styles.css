@@ -1,0 +1,743 @@
+/* ==========================================================================
+   Rolebin
+   A quiet, single-column tool. Neutral surfaces so the five status colors
+   are the only color on screen and carry the meaning.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-muted: #f5f5f5;
+  --hover: #efefef;
+  --text: #171717;
+  --text-body: #404040;
+  --text-muted: #666666;   /* 5.7:1 on white */
+  --text-subtle: #767676;  /* 4.5:1 on white, smallest allowed */
+  --border: #e5e5e5;
+  --border-strong: #a3a3a3;
+  --focus: #1d4ed8;
+
+  --primary-bg: #171717;
+  --primary-hover: #333333;
+  --primary-text: #ffffff;
+
+  /* Status colors */
+  --saved-bg: #f5f5f5;
+  --saved-text: #404040;
+  --saved-border: #d4d4d4;
+
+  --applied-bg: #eff6ff;
+  --applied-text: #1d4ed8;
+  --applied-border: #bfdbfe;
+
+  --interview-bg: #faf5ff;
+  --interview-text: #6b21a8;
+  --interview-border: #e9d5ff;
+
+  --rejected-bg: #fef2f2;
+  --rejected-text: #991b1b;
+  --rejected-border: #fecaca;
+
+  --offer-bg: #f0fdf4;
+  --offer-text: #166534;
+  --offer-border: #bbf7d0;
+
+  --warning-bg: #fffbeb;
+  --warning-text: #92400e;
+  --warning-border: #fde68a;
+
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+  --backdrop: rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --bg: #121212;
+    --surface: #1a1a1a;
+    --surface-muted: #222222;
+    --hover: #262626;
+    --text: #ededed;
+    --text-body: #cfcfcf;
+    --text-muted: #a3a3a3;
+    --text-subtle: #8f8f8f;
+    --border: #2e2e2e;
+    --border-strong: #525252;
+    --focus: #60a5fa;
+
+    --primary-bg: #ededed;
+    --primary-hover: #d4d4d4;
+    --primary-text: #121212;
+
+    --saved-bg: #262626;
+    --saved-text: #d4d4d4;
+    --saved-border: #404040;
+
+    --applied-bg: #172033;
+    --applied-text: #93c5fd;
+    --applied-border: #1e3a8a;
+
+    --interview-bg: #241a33;
+    --interview-text: #d8b4fe;
+    --interview-border: #4c1d95;
+
+    --rejected-bg: #2a1616;
+    --rejected-text: #fca5a5;
+    --rejected-border: #7f1d1d;
+
+    --offer-bg: #132418;
+    --offer-text: #86efac;
+    --offer-border: #14532d;
+
+    --warning-bg: #2a2110;
+    --warning-text: #fcd34d;
+    --warning-border: #78350f;
+
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --backdrop: rgba(0, 0, 0, 0.6);
+  }
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 2rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.logo {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.tagline {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+/* ==========================================================================
+   Controls: Search & Filter Tabs
+   ========================================================================== */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.search-box {
+  position: relative;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 0.55rem 2.25rem 0.55rem 0.75rem;
+  font-size: 0.9375rem;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: border-color 0.15s ease;
+}
+
+#searchInput::placeholder {
+  color: var(--text-subtle);
+}
+
+#searchInput:focus {
+  border-color: var(--text);
+}
+
+/* Hide the browser's own clear icon; we render one */
+#searchInput::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.clear-btn {
+  position: absolute;
+  right: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.clear-btn:hover {
+  color: var(--text);
+  background-color: var(--hover);
+}
+
+.filter-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filter-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.filter-tab:hover {
+  background-color: var(--hover);
+  color: var(--text);
+}
+
+.filter-tab.active {
+  background-color: var(--primary-bg);
+  color: var(--primary-text);
+}
+
+.filter-tab .count {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  margin-left: 0.2rem;
+}
+
+/* ==========================================================================
+   Jobs List & Cards
+   ========================================================================== */
+.jobs-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.job-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: border-color 0.15s ease;
+}
+
+.job-card:hover {
+  border-color: var(--border-strong);
+}
+
+.job-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.job-title {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.status-select {
+  width: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.status-select.status-saved { background: var(--saved-bg); color: var(--saved-text); border-color: var(--saved-border); }
+.status-select.status-applied { background: var(--applied-bg); color: var(--applied-text); border-color: var(--applied-border); }
+.status-select.status-interview { background: var(--interview-bg); color: var(--interview-text); border-color: var(--interview-border); }
+.status-select.status-rejected { background: var(--rejected-bg); color: var(--rejected-text); border-color: var(--rejected-border); }
+.status-select.status-offer { background: var(--offer-bg); color: var(--offer-text); border-color: var(--offer-border); }
+
+.status-select option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.job-meta {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.job-company {
+  font-weight: 500;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.meta-dot {
+  color: var(--text-subtle);
+}
+
+.job-date {
+  color: var(--text-subtle);
+  font-size: 0.75rem;
+}
+
+.job-notes {
+  font-size: 0.875rem;
+  color: var(--text-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 68ch;
+  margin-top: 0.15rem;
+}
+
+.job-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+
+.link-btn,
+.link-btn-danger {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: inherit;
+  padding: 0.15rem 0;
+  border-radius: 2px;
+}
+
+.link-btn {
+  color: var(--text);
+}
+
+.link-btn-danger {
+  color: var(--text-muted);
+}
+
+.link-btn-danger:hover {
+  color: var(--danger);
+}
+
+.actions-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  line-height: 1.2;
+}
+
+.btn-primary {
+  background-color: var(--primary-bg);
+  color: var(--primary-text);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  background-color: var(--hover);
+  border-color: var(--border-strong);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background-color: var(--danger-hover);
+}
+
+/* ==========================================================================
+   Empty State
+   ========================================================================== */
+.empty-state {
+  padding: 2.5rem 1.5rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 6px;
+  margin: 0.5rem 0;
+}
+
+.empty-text {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.empty-hint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  max-width: 52ch;
+  margin-top: 0.35rem;
+}
+
+.empty-state .btn {
+  margin-top: 1.25rem;
+}
+
+/* ==========================================================================
+   Alerts
+   ========================================================================== */
+.warning-alert {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+  border: 1px solid var(--warning-border);
+  padding: 0.5rem 0.75rem;
+  border-radius: 5px;
+  font-size: 0.8125rem;
+}
+
+.app > .warning-alert {
+  margin-bottom: 1.25rem;
+}
+
+.field .warning-alert {
+  margin-top: 0.2rem;
+}
+
+/* ==========================================================================
+   Modal Dialogs
+   ========================================================================== */
+.modal {
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  max-width: 460px;
+  width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+}
+
+.modal-sm {
+  max-width: 380px;
+}
+
+.modal::backdrop {
+  background-color: var(--backdrop);
+}
+
+.modal-dialog {
+  background-color: var(--surface);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 4px;
+}
+
+.close-btn:hover {
+  color: var(--text);
+  background-color: var(--hover);
+}
+
+/* Form */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.req {
+  color: var(--danger);
+}
+
+input[type="text"],
+input[type="url"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.9375rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background-color: var(--surface);
+  transition: border-color 0.15s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-subtle);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--text);
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.field-error {
+  font-size: 0.75rem;
+  color: var(--danger);
+}
+
+.field-error:empty {
+  display: none;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* Delete Modal */
+.delete-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.delete-job-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.delete-prompt {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Footer & Backup
+   ========================================================================== */
+.footer {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
+
+main {
+  margin-bottom: 3rem;
+}
+
+.footer p {
+  max-width: 52ch;
+}
+
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.text-action {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.2rem 0;
+  border-radius: 2px;
+}
+
+.text-action:hover {
+  color: var(--text);
+}
+
+.sep {
+  color: var(--text-subtle);
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 560px) {
+  .app {
+    padding: 1.5rem 1rem 1.5rem;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .modal-dialog {
+    padding: 1rem 1.1rem;
+  }
+
+  /* Larger tap targets for the in-card actions */
+  .job-actions {
+    font-size: 0.875rem;
+  }
+
+  .link-btn,
+  .link-btn-danger {
+    padding: 0.4rem 0;
+  }
+
+  .status-select {
+    padding: 0.35rem 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+  }
+}

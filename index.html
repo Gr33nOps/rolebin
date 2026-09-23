@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rolebin · Job tracker</title>
+  <meta name="description" content="Keep a list of the jobs you've found and applied to. Runs in your browser, stores everything locally, no account.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div>
+        <h1 class="logo">Rolebin</h1>
+        <p class="tagline">Personal job tracker &middot; stored only in this browser</p>
+      </div>
+      <button id="addJobBtn" class="btn btn-primary" type="button">+ Add Job</button>
+    </header>
+
+    <div id="storageError" class="warning-alert" role="alert" hidden>
+      Couldn't save to browser storage. Your latest change will be lost when you close this tab. Export a backup now.
+    </div>
+
+    <section class="controls" aria-label="Search and filter">
+      <div class="search-box">
+        <input
+          type="search"
+          id="searchInput"
+          placeholder="Search title, company, notes"
+          aria-keyshortcuts="Control+K Meta+K"
+          autocomplete="off"
+          aria-label="Search jobs"
+        >
+        <button type="button" id="clearSearchBtn" class="clear-btn" aria-label="Clear search" hidden>&times;</button>
+      </div>
+
+      <div class="filter-tabs" role="group" aria-label="Filter by status">
+        <button type="button" class="filter-tab active" data-filter="All" aria-pressed="true">All <span class="count">0</span></button>
+        <button type="button" class="filter-tab" data-filter="Saved" aria-pressed="false">Saved <span class="count">0</span></button>
+        <button type="button" class="filter-tab" data-filter="Applied" aria-pressed="false">Applied <span class="count">0</span></button>
+        <button type="button" class="filter-tab" data-filter="Interview" aria-pressed="false">Interview <span class="count">0</span></button>
+        <button type="button" class="filter-tab" data-filter="Rejected" aria-pressed="false">Rejected <span class="count">0</span></button>
+        <button type="button" class="filter-tab" data-filter="Offer" aria-pressed="false">Offer <span class="count">0</span></button>
+      </div>
+    </section>
+
+    <main>
+      <h2 class="visually-hidden">Jobs</h2>
+      <div id="jobsList" class="jobs-grid" aria-live="polite">
+        <!-- Rendered by app.js -->
+      </div>
+
+      <div id="emptyState" class="empty-state" hidden>
+        <p id="emptyMessage" class="empty-text">No jobs saved yet.</p>
+        <p id="emptyHint" class="empty-hint">
+          Paste a job link and Rolebin fills in the platform and warns you if you've saved it before.
+          Move each job from Saved to Applied, Interview, and Offer as it progresses.
+        </p>
+        <button id="emptyAddBtn" class="btn btn-primary" type="button">+ Add your first job</button>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>Nothing leaves this device. Clearing site data erases your list, so export a backup now and then.</p>
+      <div class="footer-actions">
+        <button type="button" id="exportBtn" class="text-action">Export backup (JSON)</button>
+        <span class="sep" aria-hidden="true">&middot;</span>
+        <button type="button" id="importBtn" class="text-action">Import backup</button>
+        <input type="file" id="importFileInput" accept=".json,application/json" hidden>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Add / Edit Job Dialog -->
+  <dialog id="jobModal" class="modal" aria-labelledby="modalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 id="modalTitle">Add Job</h2>
+        <button type="button" id="closeModalBtn" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+
+      <form id="jobForm" novalidate>
+        <input type="hidden" id="jobId" value="">
+
+        <div class="field">
+          <label for="jobTitle">Job title <span class="req" aria-hidden="true">*</span></label>
+          <input type="text" id="jobTitle" placeholder="e.g. Frontend Developer" required aria-required="true" aria-describedby="titleError" autocomplete="off">
+          <span class="field-error" id="titleError" aria-live="polite"></span>
+        </div>
+
+        <div class="field">
+          <label for="jobCompany">Company</label>
+          <input type="text" id="jobCompany" placeholder="e.g. Acme Corp" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="jobLink">Job link</label>
+          <input type="url" id="jobLink" placeholder="https://..." autocomplete="off" inputmode="url" aria-describedby="linkHint linkError duplicateWarning">
+          <span class="field-hint" id="linkHint">Fills in the platform and checks for duplicates</span>
+          <span class="field-error" id="linkError" aria-live="polite"></span>
+          <div id="duplicateWarning" class="warning-alert" role="status" hidden>
+            You've already saved this job link.
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="jobPlatform">Platform / source</label>
+            <input type="text" id="jobPlatform" placeholder="LinkedIn, Indeed, etc." autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="jobStatus">Status</label>
+            <select id="jobStatus">
+              <option value="Saved" selected>Saved</option>
+              <option value="Applied">Applied</option>
+              <option value="Interview">Interview</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Offer">Offer</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="jobNotes">Notes</label>
+          <textarea id="jobNotes" rows="3" placeholder="Salary, contact, interview dates..."></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="cancelModalBtn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="saveJobBtn" class="btn btn-primary">Save Job</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Delete Confirmation Dialog -->
+  <dialog id="deleteModal" class="modal modal-sm" aria-labelledby="deleteTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 id="deleteTitle">Delete job?</h2>
+        <button type="button" id="closeDeleteModalBtn" class="close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="delete-content">
+        <p id="deleteJobDetails" class="delete-job-name"></p>
+        <p class="delete-prompt">This can't be undone unless you have a backup.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="cancelDeleteBtn" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
